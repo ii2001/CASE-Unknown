@@ -20,14 +20,21 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. Mock mode is on in `.env.example`, so `GOOGLE_API_KEY` stays empty. Refresh restores the latest case from SQLite.
+Open <http://localhost:5173>. Mock mode is on in `.env.example`, so API keys stay empty. Refresh restores the latest case from SQLite.
 
 ## Configuration
 
 ```dotenv
-GOOGLE_API_KEY=
-LLM_PROVIDER=google
-GEMINI_TEXT_MODEL=gemini-3.7-flash
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=
+GEMINI_TEXT_MODEL=gemini-3.8-flash
+OPENAI_API_KEY=
+OPENAI_TEXT_MODEL=gpt-5.6-luna
+CASE_GENERATOR_PROVIDER=openai
+CASE_VALIDATOR_PROVIDER=gemini
+ACTION_ROUTER_PROVIDER=
+NPC_PROVIDER=
+NARRATOR_PROVIDER=
 CASE_GENERATOR_MODEL=
 CASE_VALIDATOR_MODEL=
 ACTION_ROUTER_MODEL=
@@ -39,7 +46,12 @@ USE_MOCK_LLM=true
 DATABASE_URL=data/case_unknown.db
 ```
 
-Role-specific text models fall back to `GEMINI_TEXT_MODEL`. Set `USE_MOCK_LLM=false` and provide `GOOGLE_API_KEY` for Gemini structured case generation and logical validation. The key is read only by FastAPI and never appears in the public config or DTO. `placeholder` images are free, deterministic and cached; `google` requests each image once and falls back per asset to SVG.
+Set `USE_MOCK_LLM=false` and provide both keys. The default role routing is:
+
+- OpenAI (`CASE_GENERATOR_PROVIDER=openai`): case generation and repair
+- Gemini (`CASE_VALIDATOR_PROVIDER=gemini`): independent logic validation
+
+Blank role providers fall back to `LLM_PROVIDER`. Provider-specific model defaults are `GEMINI_TEXT_MODEL` and `OPENAI_TEXT_MODEL`; role-specific model values override the selected provider's default. The legacy `GOOGLE_API_KEY` and `LLM_PROVIDER=google` values remain supported. Keys are read only by FastAPI and never appear in the public config or DTO. `IMAGE_PROVIDER=google` uses the Gemini key for generated images; `placeholder` images are free, deterministic and cached.
 
 ## Architecture
 
@@ -51,10 +63,10 @@ flowchart LR
   Engine --> DB[(SQLite canonical + player state)]
   API --> SSE[SSE narration]
   API --> Visuals[Cached procedural visuals]
-  Gemini[Gemini structured output] -. optional roles .-> Graphs
+  Models[OpenAI or Gemini structured output] -. optional roles .-> Graphs
 ```
 
-LangGraph supplies bounded, typed case-generation and investigation workflows; it is not a generic agent wrapper. LangChain's Gemini adapter is centralized by role and uses Pydantic structured output. In mock mode, deterministic routing and dialogue make the complete game reproducible.
+LangGraph supplies bounded, typed case-generation and investigation workflows; it is not a generic agent wrapper. LangChain's OpenAI and Gemini adapters are centralized by role and use Pydantic structured output. In mock mode, deterministic routing and dialogue make the complete game reproducible.
 
 The central rule is that the model never mutates `CanonicalCase` or decides a verdict. The engine alone checks clue prerequisites, movement, locks, discovery, NPC knowledge and accusations. The browser receives `player_view()` and cannot inspect culprit, motive, method or solution until the game is over. See [system architecture](docs/system-architecture.md), [LangGraph design](docs/langgraph-design.md), and [AI boundaries](docs/ai-boundaries.md).
 
