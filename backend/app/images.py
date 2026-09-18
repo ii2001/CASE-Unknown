@@ -23,7 +23,7 @@ def ensure_case_images(case: CanonicalCase, settings: Settings) -> None:
         if any(directory.glob(f"{brief.id}.*")):
             continue
         path = directory / f"{brief.id}.svg"
-        if settings.image_provider == "google" and settings.google_api_key:
+        if settings.image_provider == "google" and settings.effective_gemini_api_key:
             try:
                 from google import genai
                 from google.genai import types
@@ -34,7 +34,7 @@ def ensure_case_images(case: CanonicalCase, settings: Settings) -> None:
                     f"Camera: {brief.camera_style}. Continuity: {brief.continuity_notes}. "
                     f"Do not show: {', '.join(brief.prohibited_details)}. No text, no new clues."
                 )
-                response = genai.Client(api_key=settings.google_api_key).models.generate_content(
+                response = genai.Client(api_key=settings.effective_gemini_api_key).models.generate_content(
                     model=settings.gemini_image_model,
                     contents=prompt,
                     config=types.GenerateContentConfig(response_modalities=["IMAGE"]),

@@ -10,6 +10,11 @@ from app.repository import CaseRepository
 from app.validation import validate_case
 from app.views import player_view
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
+
+
+class ProviderResult(BaseModel):
+    value: str
 
 
 def test_valid_case_has_one_culprit_and_references():
@@ -142,6 +147,58 @@ def test_generation_retry_is_bounded(monkeypatch):
         {"genre": "test"}, {"recursion_limit": 12}
     )
     assert result["attempts"] == 3 and not result["validation"].valid
+
+
+def test_text_provider_routes_roles_independently(monkeypatch):
+    from app.config import Settings
+    from app.providers import ModelRole, get_text_model
+
+    captured = []
+
+    class FakeModel:
+        def __init__(self, **kwargs):
+            captured.append(kwargs["model"])
+
+        def with_structured_output(self, schema, **kwargs):
+            return self
+
+    monkeypatch.setattr(__import__("langchain_openai"), "ChatOpenAI", FakeModel)
+    monkeypatch.setattr(
+        __import__("langchain_google_genai"), "ChatGoogleGenerativeAI", FakeModel
+    )
+    settings = Settings(
+        use_mock_llm=False,
+        openai_api_key="openai-key",
+        gemini_api_key="gemini-key",
+        case_generator_provider="openai",
+        case_validator_provider="gemini",
+        case_generator_model="openai-generator",
+        case_validator_model="gemini-validator",
+    )
+    get_text_model(ModelRole.CASE_GENERATOR, ProviderResult, settings)
+    get_text_model(ModelRole.CASE_VALIDATOR, ProviderResult, settings)
+
+    assert captured == ["openai-generator", "gemini-validator"]
+
+
+@pytest.mark.parametrize("provider", ["gemini", "openai"])
+def test_text_provider_requires_its_api_key(provider):
+    from app.config import Settings
+    from app.providers import ModelRole, get_text_model
+
+    with pytest.raises(ValueError, match="API_KEY"):
+        get_text_model(
+            ModelRole.CASE_GENERATOR,
+            ProviderResult,
+            Settings(
+                _env_file=None,
+                use_mock_llm=False,
+                llm_provider=provider,
+                gemini_api_key="",
+                google_api_key="",
+                openai_api_key="",
+            ),
+        )
 
 
 def test_api_playthrough_and_no_network_leakage():
