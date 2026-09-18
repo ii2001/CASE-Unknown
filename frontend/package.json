@@ -1,0 +1,9 @@
+{
+  "name": "case-unknown-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {"dev":"node node_modules/vite/bin/vite.js","build":"node node_modules/vue-tsc/bin/vue-tsc.js -b && node node_modules/vite/bin/vite.js build","test":"sh scripts/test.sh","lint":"node node_modules/eslint/bin/eslint.js ."},
+  "dependencies": {"@vitejs/plugin-vue":"latest","pinia":"latest","vite":"latest","vue":"latest"},
+  "devDependencies": {"@eslint/js":"latest","@types/node":"latest","@vue/test-utils":"latest","eslint":"latest","eslint-plugin-vue":"latest","jsdom":"latest","typescript":"latest","typescript-eslint":"latest","vitest":"latest","vue-tsc":"latest"}
+}
