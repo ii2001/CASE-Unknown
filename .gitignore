@@ -1,0 +1,13 @@
+.env
+.idea/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+*.tsbuildinfo
+data/case_unknown.db
+data/cases/*/
+*.pyc
+.DS_Store
